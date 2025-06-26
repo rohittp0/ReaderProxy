@@ -1,5 +1,9 @@
 package com.rohitp.readerproxy
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.VpnService
 import androidx.core.net.toUri
 import timber.log.Timber
@@ -19,6 +23,10 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
     private val executor = Executors.newCachedThreadPool()
 
     fun start() {
+        val cm = vpn.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val ok = cm.bindProcessToNetwork(cm.nonVpnNetwork()!!)
+        Timber.d("bindProcessToNetwork: $ok")
+
         val server = ServerSocket(listenPort)
         Timber.i("Starting HTTP proxy on port $listenPort")
 
@@ -75,7 +83,7 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
             /* ---------- 4. Connect to origin ---------- */
             val upstream = Socket()
             vpn.protect(upstream)                        // bypass the VPN to avoid loops
-            upstream.connect(InetSocketAddress(host, port), 10_000)
+            upstream.connect(InetSocketAddress.createUnresolved(host, port), 10_000)
 
             val upstreamOut = BufferedOutputStream(upstream.getOutputStream())
             val upstreamIn = BufferedInputStream(upstream.getInputStream())
@@ -105,4 +113,9 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
             }
         }
     }
+
+    fun ConnectivityManager.nonVpnNetwork(): Network? =
+        allNetworks.firstOrNull { net ->
+            getNetworkCapabilities(net)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == false
+        }
 }
