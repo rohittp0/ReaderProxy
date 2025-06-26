@@ -75,34 +75,43 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
 
             Timber.i("Handling request: $method $absUri to $host:$port")
 
-            /* ---------- 3. Build a new request line for the origin server ---------- */
-            val pathOnly = (absUri.path ?: "/") + "?${absUri.encodedQuery}"
+            /* ---------- 3. Build request line & headers ---------- */
+            val pathOnly = buildString {
+                append(absUri.encodedPath ?: "/")
+                absUri.encodedQuery?.let { append('?').append(it) }
+            }
             val newRequestLine = "$method $pathOnly $version\r\n"
 
-            /* ---------- 4. Connect to origin ---------- */
+// we’ll rebuild headers, ensuring we send Connection: close
+            val filtered = headerLines
+                .filterNot { it.startsWith("Proxy-Connection", true) || it.startsWith("Connection", true) }
+            val finalHeaders = buildString {
+                filtered.forEach { append(it).append("\r\n") }
+                append("Connection: close\r\n\r\n")   // force server to close after body
+            }
+
+            /* ---------- 4. Connect & send ---------- */
             val upstream = getProtectedSocket()
-            val address = InetSocketAddress(host, port)
-            upstream.connect(address)
+            upstream.tcpNoDelay = true
+            upstream.connect(InetSocketAddress(host, port), 10_000)
 
             val upstreamOut = BufferedOutputStream(upstream.getOutputStream())
-            val upstreamIn = BufferedInputStream(upstream.getInputStream())
+            val upstreamIn  = BufferedInputStream(upstream.getInputStream())
 
-            // Send request line + headers (strip Proxy‑Connection header)
-            upstreamOut.write(newRequestLine.toByteArray(StandardCharsets.US_ASCII))
-            headerLines.filterNot { it.startsWith("Proxy-Connection", true) }
-                .forEach { upstreamOut.write("$it\r\n".toByteArray(StandardCharsets.US_ASCII)) }
-            upstreamOut.write("\r\n".toByteArray())       // blank line = end of headers
+            upstreamOut.write(newRequestLine.toByteArray())
+            upstreamOut.write(finalHeaders.toByteArray())
             upstreamOut.flush()
 
-            Timber.d("Sent request to $host:$port")
+            Timber.d("Request sent to upstream server")
 
-            /* ---------- 5. Stream the response back to the client ---------- */
-            val clientOut = BufferedOutputStream(client.getOutputStream())
-            val buffer = ByteArray(8192)
+            /* ---------- 5. Stream response ---------- */
+            val clientOut = client.getOutputStream()            // unbuffered is fine
+            val buf = ByteArray(16 * 1024)
 
-            var read: Int
-            while (upstreamIn.read(buffer).also { read = it } != -1) {
-                clientOut.write(buffer, 0, read)
+            while (true) {
+                val n = upstreamIn.read(buf)
+                if (n < 0) break
+                clientOut.write(buf, 0, n)   // immediate push
             }
             clientOut.flush()
 
