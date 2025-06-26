@@ -9,6 +9,7 @@ import android.graphics.drawable.Icon
 import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
+import com.rohitp.readerproxy.proxy.ProxyServer
 import kotlin.concurrent.thread
 
 
@@ -29,7 +30,7 @@ class MyVpnService : VpnService() {
         super.onCreate()
         // Start the local proxy inside a background thread
         proxyThread = thread(name = "local-http-proxy") {
-            HttpProxy(this@MyVpnService, PROXY_PORT).start()
+            ProxyServer(this@MyVpnService, PROXY_PORT).startBlocking()
         }
     }
 
