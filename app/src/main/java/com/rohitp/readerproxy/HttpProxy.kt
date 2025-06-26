@@ -1,9 +1,5 @@
 package com.rohitp.readerproxy
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
 import android.net.VpnService
 import androidx.core.net.toUri
 import timber.log.Timber
@@ -23,10 +19,6 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
     private val executor = Executors.newCachedThreadPool()
 
     fun start() {
-        val cm = vpn.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val ok = cm.bindProcessToNetwork(cm.nonVpnNetwork()!!)
-        Timber.d("bindProcessToNetwork: $ok")
-
         val server = ServerSocket(listenPort)
         Timber.i("Starting HTTP proxy on port $listenPort")
 
@@ -34,6 +26,13 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
             val client = server.accept()
             executor.execute { handleClient(client) }
         }
+    }
+
+    private fun getProtectedSocket(): Socket {
+        val upstream = Socket()
+        vpn.protect(upstream)                       // extra safety, no harm
+
+        return upstream
     }
 
     private fun handleClient(client: Socket) {
@@ -81,9 +80,9 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
             val newRequestLine = "$method $pathOnly $version\r\n"
 
             /* ---------- 4. Connect to origin ---------- */
-            val upstream = Socket()
-            vpn.protect(upstream)                        // bypass the VPN to avoid loops
-            upstream.connect(InetSocketAddress.createUnresolved(host, port), 10_000)
+            val upstream = getProtectedSocket()
+            val address = InetSocketAddress(host, port)
+            upstream.connect(address)
 
             val upstreamOut = BufferedOutputStream(upstream.getOutputStream())
             val upstreamIn = BufferedInputStream(upstream.getInputStream())
@@ -95,6 +94,8 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
             upstreamOut.write("\r\n".toByteArray())       // blank line = end of headers
             upstreamOut.flush()
 
+            Timber.d("Sent request to $host:$port")
+
             /* ---------- 5. Stream the response back to the client ---------- */
             val clientOut = BufferedOutputStream(client.getOutputStream())
             val buffer = ByteArray(8192)
@@ -104,6 +105,8 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
                 clientOut.write(buffer, 0, read)
             }
             clientOut.flush()
+
+            Timber.d("Response sent to client")
         } catch (e: Exception) {
             Timber.e(e, "Error handling client request")
         } finally {
@@ -113,9 +116,4 @@ class HttpProxy(private val vpn: VpnService, private val listenPort: Int = 8888)
             }
         }
     }
-
-    fun ConnectivityManager.nonVpnNetwork(): Network? =
-        allNetworks.firstOrNull { net ->
-            getNetworkCapabilities(net)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == false
-        }
 }
