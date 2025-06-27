@@ -2,6 +2,8 @@ package com.rohitp.readerproxy.proxy
 
 import android.net.VpnService
 import com.rohitp.readerproxy.logic.HtmlProcessor
+import com.rohitp.readerproxy.markAndPeekLine
+import com.rohitp.readerproxy.readLineAscii
 import timber.log.Timber
 import java.io.BufferedInputStream
 import java.io.BufferedReader
@@ -31,7 +33,7 @@ class ClientWorker(
         client.use { cli ->
             val inBuf  = BufferedInputStream(cli.getInputStream())
             val peek   = inBuf.markAndPeekLine()
-            if (peek.startsWith("CONNECT", true)) handleHttpsTunnel(cli, inBuf, peek)
+            if (peek.startsWith("CONNECT", true)) handleHttpsTunnel(cli, peek)
             else handlePlainHttp(cli, BufferedReader(InputStreamReader(inBuf)))
         }
     }
@@ -74,34 +76,32 @@ class ClientWorker(
     }
 
     /** -------- HTTPS via CONNECT -------- */
-    private fun handleHttpsTunnel(cli: Socket, inBuf: BufferedInputStream, firstLine: String) {
+    private fun handleHttpsTunnel(cli: Socket, firstLine: String) {
         val hostPort = firstLine.split(' ')[1]
         val host = hostPort.substringBefore(':')
         val port = hostPort.substringAfter(':').toInt()
 
         // 1) Acknowledge CONNECT
-        cli.getOutputStream().write("HTTP/1.1 200 OK\r\n\r\n".toByteArray())
+        cli.getOutputStream().write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray())
 
-        // 2) Wrap client side in TLS using forged cert
-        val sslToClient = certMgr.serverContext(host)
-            .createSSLEngine().run {
-                useClientMode = false
-                (cli as SSLSocket).also { /* can't cast raw Socket; need factory: */ }
-            }
-        // For brevity we'll use cast trick; in real code wrap via SSLSocketFactory
+        // 2) TLS to client with forged cert
+        val sslCtx = certMgr.serverContext(host)
+        val sslToClient = sslCtx.socketFactory
+            .createSocket(cli, cli.inetAddress.hostAddress, cli.port, /*autoClose*/false) as SSLSocket
+        sslToClient.useClientMode = false
+        sslToClient.startHandshake()
 
-        // 3) Open protected TLS socket to origin
-        val upSsl = SSLSocketFactory.getDefault()
-            .createSocket(host, port) as SSLSocket
-        vpn.protect(upSsl) // bypass VPN tunnel
-
+        // 3) TLS to origin
+        val upRaw   = protectedSocket(host, port) ?: return
+        val upSsl   = (SSLSocketFactory.getDefault() as SSLSocketFactory)
+            .createSocket(upRaw, host, port, true) as SSLSocket
         upSsl.startHandshake()
 
-        // 4) Pipe both directions (optionally intercept HTML after decrypting)
-        val pipeDown = IOThread(sslToClient.inputStream, upSsl.outputStream)
-        val pipeUp   = IOThread(upSsl.inputStream, sslToClient.outputStream)
-        pipeDown.start(); pipeUp.start()
-        pipeDown.join(); pipeUp.join()
+        // 4) Bridge both directions
+        val down = IOThread(sslToClient.inputStream, upSsl.outputStream)
+        val up   = IOThread(upSsl.inputStream, sslToClient.outputStream)
+        down.start(); up.start()
+        down.join();  up.join()
     }
 
     /** Helper: create socket bypassing VPN */

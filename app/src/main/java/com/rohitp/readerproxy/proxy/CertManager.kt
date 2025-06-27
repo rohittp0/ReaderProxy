@@ -1,6 +1,7 @@
 package com.rohitp.readerproxy.proxy
 
 import android.content.Context
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.openssl.PEMParser
@@ -9,7 +10,7 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralNames
-import org.bouncycastle.openssl.PEMKeyPair
+import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter
 import java.io.InputStreamReader
 import java.math.BigInteger
@@ -30,11 +31,12 @@ class CertManager(ctx: Context) {
 
     init {
         val p = PEMParser(InputStreamReader(ctx.assets.open("ca_cert.pem")))
-        caCert = p.readObject() as X509Certificate
+        val caCertHolder = p.readObject() as X509CertificateHolder
+        caCert = JcaX509CertificateConverter().getCertificate(caCertHolder)
         p.close()
 
         val pKey = PEMParser(InputStreamReader(ctx.assets.open("ca_key.pem")))
-        caKey = JcaPEMKeyConverter().getPrivateKey((pKey.readObject() as PEMKeyPair).privateKeyInfo)
+        caKey = JcaPEMKeyConverter().getPrivateKey((pKey.readObject() as PrivateKeyInfo))
         pKey.close()
     }
 
