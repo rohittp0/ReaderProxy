@@ -8,7 +8,7 @@ import java.util.concurrent.Executors
 class ProxyServer(
     private val vpn: VpnService,
     private val port: Int = 8888,
-    private val threadPoolSize: Int = 16
+    threadPoolSize: Int = 16
 ) {
 
     private val executor = Executors.newFixedThreadPool(threadPoolSize)
