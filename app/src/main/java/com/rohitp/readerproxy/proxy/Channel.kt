@@ -25,19 +25,16 @@ class TlsChannel(
 ) {
     /** TLS layer towards the browser (forged cert). */
     val clientSock = (clientCtx.socketFactory.createSocket(browser, host, port, false) as SSLSocket)
-            .apply { useClientMode = false; startHandshake() }
+        .apply { useClientMode = false; startHandshake() }
 
     /** TLS layer towards the origin server. */
-    val serverSock = run {
-        (SSLSocketFactory.getDefault()
-            .createSocket(host, port) as SSLSocket)
-            .also {
-                vpn.protect(it) // protect the socket from VPN
-                val p = it.sslParameters
-                p.serverNames = listOf(SNIHostName(host)) // SNI fix
-                it.sslParameters = p
-                it.startHandshake()
-            }
+    val serverSock = (SSLSocketFactory.getDefault().createSocket(host, port) as SSLSocket).also {
+        vpn.protect(it) // protect the socket from VPN
+        val p = it.sslParameters
+        p.applicationProtocols = arrayOf("http/1.1")
+        p.serverNames = listOf(SNIHostName(host)) // SNI fix
+        it.sslParameters = p
+        it.startHandshake()
     }
 }
 

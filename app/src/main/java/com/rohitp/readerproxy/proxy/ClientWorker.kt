@@ -25,8 +25,8 @@ class ClientWorker(
                 if (firstLine.startsWith("CONNECT", true)) handleConnect(firstLine)
                 else handlePlain(buf)
             }
-            catch (e: SSLHandshakeException) {
-                Timber.w(e, "TLS handshake failed, trying plain HTTP")
+            catch (_: SSLHandshakeException) {
+                Timber.w("TLS handshake failed, trying plain HTTP")
                 handlePlain(buf)
             }
         } catch (e: Exception) {
