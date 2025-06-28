@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
@@ -25,12 +26,14 @@ import com.rohitp.readerproxy.ui.theme.ReaderProxyTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var vpnPermissionLauncher: ActivityResultLauncher<Intent>
+    private lateinit var caInstallRequest: ActivityResultLauncher<Intent>
     private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         vpnInit()
+        initCaInstall()
         notificationInit()
 
         // 5. UI
@@ -44,13 +47,55 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .wrapContentSize(Alignment.Center)
                     ) {
-                        Button(onClick = {
-                            checkAndStartVpn()
-                        }) {
-                            Text(text = "Start Reader Mode")
+                        Column {
+                            Button(onClick = {
+                                checkAndStartVpn()
+                            }) {
+                                Text(text = "Start Reader Mode")
+                            }
+                            Button(onClick = {
+                                promptInstallCa()
+                            }) {
+                                Text(text = "Install CA Certificate")
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private fun promptInstallCa() {
+        // 1. Load the PEM bytes
+        val pemBytes = assets.open("ca_cert.pem").use { it.readBytes() }
+
+        // 2. Build the install-intent
+        val intent = android.security.KeyChain.createInstallIntent().apply {
+            putExtra(android.security.KeyChain.EXTRA_CERTIFICATE, pemBytes)
+            putExtra(android.security.KeyChain.EXTRA_NAME, "ReaderProxy CA")
+        }
+
+        caInstallRequest.launch(intent)
+    }
+
+    private fun initCaInstall() {
+        caInstallRequest = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_OK) {
+                // CA installed successfully
+                Toast.makeText(
+                    this, "CA installed successfully. Reader Mode Proxy can now run.",
+                    Toast.LENGTH_LONG
+                ).show()
+                checkAndStartVpn()
+            } else {
+                // CA installation failed or was cancelled
+                Toast.makeText(
+                    this,
+                    "CA installation failed. Reader Mode Proxy can't intercept HTTPS traffic.",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
