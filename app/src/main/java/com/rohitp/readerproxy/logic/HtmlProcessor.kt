@@ -39,7 +39,6 @@ body{
 """.trimIndent()
 
 class HtmlProcessor {
-
     /** Returns reader-mode HTML. On failure returns [body] unchanged. */
     fun process(body: String, protocol: Protocol, host: String, path: String): String {
         if (Constants.IGNORED_HOSTS.contains(host)) return body
@@ -62,7 +61,6 @@ class HtmlProcessor {
         /* 2. Sanitize & tidy with Jsoup */
         val doc: Document = Jsoup.parse("<html><head></head><body>$contentHtml</body></html>")
         doc.outputSettings().escapeMode(Entities.EscapeMode.xhtml)
-        doc.select("script, noscript, style, iframe, nav, header, footer, aside").remove()
         Jsoup.clean(doc.html(), Safelist.relaxed().addTags("figure", "figcaption"))
 
         doc.head().append("<meta charset=\"utf-8\"><title>$title</title>")
