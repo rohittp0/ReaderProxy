@@ -8,6 +8,7 @@ import java.io.BufferedInputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.Socket
+import javax.net.ssl.SSLHandshakeException
 
 class ClientWorker(
     private val vpn: VpnService,
@@ -20,8 +21,14 @@ class ClientWorker(
         try {
             val buf = BufferedInputStream(browser.getInputStream())
             val firstLine = buf.markAndPeekLine()
-            if (firstLine.startsWith("CONNECT", true)) handleConnect(buf, firstLine)
-            else handlePlain(buf)
+            try {
+                if (firstLine.startsWith("CONNECT", true)) handleConnect(firstLine)
+                else handlePlain(buf)
+            }
+            catch (e: SSLHandshakeException) {
+                Timber.w(e, "TLS handshake failed, trying plain HTTP")
+                handlePlain(buf)
+            }
         } catch (e: Exception) {
             Timber.e(e, "worker crashed")
         } finally { browser.close() }
@@ -39,7 +46,7 @@ class ClientWorker(
         }
     }
 
-    private fun handleConnect(buf: BufferedInputStream, first: String) {
+    private fun handleConnect(first: String) {
         val host = first.split(' ')[1].substringBefore(':')
         val port = first.split(' ')[1].substringAfter(':').toInt()
         browser.getOutputStream().write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray())

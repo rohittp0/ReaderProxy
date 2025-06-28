@@ -36,7 +36,11 @@ class HttpSession(
 
         /* ----- forward req ----- */
         serverOut.write("$reqLine\r\n".toByteArray())
-        reqHdrs.forEach { serverOut.write("$it\r\n".toByteArray()) }
+
+        val filtered = reqHdrs.filterNot { it.startsWith("Accept-Encoding", true) }
+        serverOut.write("Accept-Encoding: gzip, identity\r\n".toByteArray())
+        filtered.forEach { serverOut.write("$it\r\n".toByteArray()) }
+
         serverOut.write("\r\n".toByteArray())
         serverOut.flush()
 
