@@ -1,4 +1,12 @@
-## Setup Certificate Authority
+# ReaderProxy
+
+![Screen Recording](docs/screen-recording.mp4)
+
+Make all websites reader mode compatible.
+
+## Development Setup
+
+### Setup Certificate Authority
 
 ```bash
 # 1) Generate a new RSA private key (PEM, PKCS#8 format)
