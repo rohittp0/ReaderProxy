@@ -13,6 +13,7 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.charset.StandardCharsets
+import java.util.zip.GZIPInputStream
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 
@@ -38,70 +39,91 @@ class ClientWorker(
         }
     }
 
-    /** -------- plain HTTP -------- */
     private fun handlePlainHttp(cli: Socket, reader: BufferedReader) {
         val req = HttpParser.parseRequest(reader) ?: return
         val upstream = protectedSocket(req.host, req.port) ?: return
         upstream.use { up ->
-            // forward request
             HttpParser.writeRequest(req, up.getOutputStream())
 
             val upIn  = BufferedInputStream(up.getInputStream())
             val cliOut = cli.getOutputStream()
 
-            // read response headers first
-            val headers = StringBuilder()
+            /** --- read & buffer response headers --- */
+            val hdrLines = mutableListOf<String>()
             while (true) {
-                val line = upIn.readLineAscii()
-                if (line.isEmpty()) break
-                headers.append(line).append("\r\n")
+                val l = upIn.readLineAscii()
+                if (l.isEmpty()) break
+                hdrLines += l
             }
-            headers.append("\r\n")
-            val hdrBytes = headers.toString().toByteArray(StandardCharsets.US_ASCII)
-            cliOut.write(hdrBytes)
 
-            // detect HTML
-            val isHtml = headers.contains("Content-Type:", true) &&
-                    headers.contains("text/html", true)
+            var isGzip = false
+            var isHtml = false
+            val rebuiltHeaders = StringBuilder()
+            for (h in hdrLines) {
+                val lower = h.lowercase()
+                if (lower.startsWith("content-encoding:") && lower.contains("gzip")) {
+                    isGzip = true                     // strip it later
+                    continue
+                }
+                if (lower.startsWith("content-type:") && lower.contains("text/html"))
+                    isHtml = true
+                if (!lower.startsWith("content-length:"))   // we’ll recalc if needed
+                    rebuiltHeaders.append(h).append("\r\n")
+            }
 
-            if (!isHtml) {
-                upIn.copyTo(cliOut)                 // stream verbatim
+            /** --- body handling --- */
+            val bodyBytes: ByteArray = if (!isHtml) {
+                upIn.readBytes()                        // binary passthrough
             } else {
-                val body = upIn.readBytes()
-                val modified = htmlProc.process(String(body, StandardCharsets.UTF_8))
-                cliOut.write(modified.toByteArray(StandardCharsets.UTF_8))
+                val raw = if (isGzip)
+                    GZIPInputStream(upIn).readBytes()
+                else
+                    upIn.readBytes()
+                htmlProc.process(String(raw, StandardCharsets.UTF_8))
+                    .toByteArray(StandardCharsets.UTF_8)
             }
+
+            /** --- write back --- */
+            rebuiltHeaders
+                .append("Content-Length: ${bodyBytes.size}\r\n")
+                .append("Connection: close\r\n\r\n")
+
+            cliOut.write(rebuiltHeaders.toString().toByteArray(StandardCharsets.US_ASCII))
+            cliOut.write(bodyBytes)
             cliOut.flush()
         }
     }
 
     /** -------- HTTPS via CONNECT -------- */
     private fun handleHttpsTunnel(cli: Socket, firstLine: String) {
+        return
         val hostPort = firstLine.split(' ')[1]
         val host = hostPort.substringBefore(':')
         val port = hostPort.substringAfter(':').toInt()
 
         // 1) Acknowledge CONNECT
-        cli.getOutputStream().write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray())
+        cli.getOutputStream()
+            .write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray())
 
-        // 2) TLS to client with forged cert
-        val sslCtx = certMgr.serverContext(host)
-        val sslToClient = sslCtx.socketFactory
-            .createSocket(cli, cli.inetAddress.hostAddress, cli.port, /*autoClose*/false) as SSLSocket
+        // 2) TLS *to browser* with forged cert
+        val sslToClient = certMgr
+            .serverContext(host)
+            .socketFactory
+            .createSocket(cli, host, port, /*autoClose*/false) as SSLSocket
         sslToClient.useClientMode = false
         sslToClient.startHandshake()
 
-        // 3) TLS to origin
-        val upRaw   = protectedSocket(host, port) ?: return
-        val upSsl   = (SSLSocketFactory.getDefault() as SSLSocketFactory)
-            .createSocket(upRaw, host, port, true) as SSLSocket
+        // 3) TLS *to origin*
+        val upTcp = protectedSocket(host, port) ?: return
+        val upSsl = (SSLSocketFactory.getDefault() as SSLSocketFactory)
+            .createSocket(upTcp, host, port, true) as SSLSocket
         upSsl.startHandshake()
 
-        // 4) Bridge both directions
-        val down = IOThread(sslToClient.inputStream, upSsl.outputStream)
-        val up   = IOThread(upSsl.inputStream, sslToClient.outputStream)
-        down.start(); up.start()
-        down.join();  up.join()
+        // 4) Bi-directional pipe (HTML interception TODO)
+        IOThread(sslToClient.inputStream, upSsl.outputStream).start()
+        val copy = IOThread(upSsl.inputStream, sslToClient.outputStream)
+        copy.start()
+        copy.join()
     }
 
     /** Helper: create socket bypassing VPN */
