@@ -3,6 +3,8 @@ package com.rohitp.readerproxy.proxy
 import android.net.VpnService
 import com.rohitp.readerproxy.logic.HtmlProcessor
 import com.rohitp.readerproxy.markAndPeekLine
+import com.rohitp.readerproxy.maybeGunzip
+import com.rohitp.readerproxy.readChunked
 import com.rohitp.readerproxy.readLineAscii
 import timber.log.Timber
 import java.io.BufferedInputStream
@@ -13,12 +15,13 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.charset.StandardCharsets
-import java.util.zip.GZIPInputStream
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 
 private class IOThread(private val inp: InputStream, private val out: OutputStream) : Thread() {
-    override fun run() { inp.copyTo(out); out.flush() }
+    override fun run() {
+        inp.copyTo(out); out.flush()
+    }
 }
 
 
@@ -32,8 +35,8 @@ class ClientWorker(
     override fun run() {
         client.soTimeout = 20_000
         client.use { cli ->
-            val inBuf  = BufferedInputStream(cli.getInputStream())
-            val peek   = inBuf.markAndPeekLine()
+            val inBuf = BufferedInputStream(cli.getInputStream())
+            val peek = inBuf.markAndPeekLine()
             if (peek.startsWith("CONNECT", true)) handleHttpsTunnel(cli, peek)
             else handlePlainHttp(cli, BufferedReader(InputStreamReader(inBuf)))
         }
@@ -45,51 +48,55 @@ class ClientWorker(
         upstream.use { up ->
             HttpParser.writeRequest(req, up.getOutputStream())
 
-            val upIn  = BufferedInputStream(up.getInputStream())
+            val upIn = BufferedInputStream(up.getInputStream())
             val cliOut = cli.getOutputStream()
 
-            /** --- read & buffer response headers --- */
-            val hdrLines = mutableListOf<String>()
-            while (true) {
-                val l = upIn.readLineAscii()
-                if (l.isEmpty()) break
-                hdrLines += l
-            }
+            val rebuiltHeaders = StringBuilder()
+            val originalHeaders = StringBuilder()
 
             var isGzip = false
             var isHtml = false
-            val rebuiltHeaders = StringBuilder()
-            for (h in hdrLines) {
-                val lower = h.lowercase()
-                if (lower.startsWith("content-encoding:") && lower.contains("gzip")) {
-                    isGzip = true                     // strip it later
-                    continue
+            var isChunked = false
+
+            while (true) {
+                val line = upIn.readLineAscii()
+                if (line.isEmpty()) break
+
+                val lower = line.lowercase()
+
+                when (lower) {
+                    "transfer-encoding: chunked" -> isChunked = true
+                    "content-encoding: gzip" -> isGzip = true
+                    "content-type: text/html" -> isHtml = true
+                    "connection: close" -> {}
+                    else -> if (!lower.startsWith("content-length:"))
+                        rebuiltHeaders.append(line).append("\r\n")
                 }
-                if (lower.startsWith("content-type:") && lower.contains("text/html"))
-                    isHtml = true
-                if (!lower.startsWith("content-length:"))   // we’ll recalc if needed
-                    rebuiltHeaders.append(h).append("\r\n")
+                originalHeaders.append(line).append("\r\n")
             }
 
-            /** --- body handling --- */
-            val bodyBytes: ByteArray = if (!isHtml) {
-                upIn.readBytes()                        // binary passthrough
-            } else {
-                val raw = if (isGzip)
-                    GZIPInputStream(upIn).readBytes()
-                else
-                    upIn.readBytes()
-                htmlProc.process(String(raw, StandardCharsets.UTF_8))
-                    .toByteArray(StandardCharsets.UTF_8)
+            if (!isHtml) {
+                cliOut.write(originalHeaders.toString().toByteArray(StandardCharsets.US_ASCII))
+                cliOut.write(upIn.readBytes())
+                cliOut.flush()
+                return
             }
+
+            val rawBody = if (!isChunked) upIn.readBytes()                       // simple
+            else upIn.readChunked()                    // de-chunk first
+
+            val body = rawBody.maybeGunzip()
+            val processedBody = htmlProc.process(String(body, StandardCharsets.UTF_8))
+                .toByteArray(StandardCharsets.UTF_8)
 
             /** --- write back --- */
             rebuiltHeaders
-                .append("Content-Length: ${bodyBytes.size}\r\n")
+                .append("Content-Length: ${processedBody.size}\r\n")
+                .append("Content-Type: text/html\r\n")
                 .append("Connection: close\r\n\r\n")
 
             cliOut.write(rebuiltHeaders.toString().toByteArray(StandardCharsets.US_ASCII))
-            cliOut.write(bodyBytes)
+            cliOut.write(processedBody)
             cliOut.flush()
         }
     }

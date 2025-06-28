@@ -1,6 +1,38 @@
 package com.rohitp.readerproxy
 
 import java.io.BufferedInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.util.zip.GZIPInputStream
+
+private const val CR = '\r'.code
+
+/** De-chunk Transfer-Encoding: chunked into a raw byte[] */
+fun InputStream.readChunked(): ByteArray {
+    val out = ByteArrayOutputStream()
+    while (true) {
+        // read chunk-size line (hex)
+        val sizeLine = buildString {
+            var c: Int
+            while (read().also { c = it } != -1 && c != CR) append(c.toChar())
+        }
+        read() // skip LF
+        val chunkSize = sizeLine.trim().toInt(16)
+        if (chunkSize == 0) break
+        val buf = ByteArray(chunkSize)
+        readNBytes(buf, 0, chunkSize)
+        out.write(buf)
+        read(); read()              // skip CR LF after the chunk
+    }
+    return out.toByteArray()
+}
+
+/** Inflate if the payload starts with the gzip magic; otherwise return as is. */
+fun ByteArray.maybeGunzip(): ByteArray =
+    if (size >= 2 && this[0] == 0x1F.toByte() && this[1] == 0x8B.toByte()) {
+        GZIPInputStream(inputStream()).readBytes()
+    } else this
+
 
 /**
  * Mark the current position, read the first ASCII line, reset, and return it.
