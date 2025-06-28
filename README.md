@@ -1,6 +1,6 @@
 # ReaderProxy
 
-![Screen Recording](docs/screen-recording.mp4)
+![Screen Recording](docs/screen-recording.gif)
 
 Make all websites reader mode compatible.
 
