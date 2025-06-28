@@ -8,20 +8,24 @@ import java.io.BufferedInputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 
+enum class Protocol(val value: String) {
+    HTTP("http"), HTTPS("https");
+}
+
 /**
  * Handles ONE request–response cycle on already-connected streams.
  * Works for plain-text or TLS because it only uses Input/OutputStreams.
  */
 class HttpSession(
-    private val clientIn:  BufferedInputStream,
+    private val clientIn: BufferedInputStream,
     private val clientOut: OutputStream,
-    private val serverIn:  BufferedInputStream,
+    private val serverIn: BufferedInputStream,
     private val serverOut: OutputStream,
     private val htmlProcessor: HtmlProcessor
 ) {
 
     /** returns true if connection may stay open (keep-alive) */
-    fun relayOnce(host: String): Boolean {
+    fun relayOnce(protocol: Protocol, host: String): Boolean {
         /* ----- read req ----- */
         val reqLine = clientIn.readLineAscii()
         if (reqLine.isEmpty()) return false
@@ -47,27 +51,38 @@ class HttpSession(
         val statusLine = serverIn.readLineAscii()
         val respHdrs = mutableListOf<String>()
         var isChunked = false
-        var isGzip    = false
-        var isHtml    = false
+        var isGzip = false
+        var isHtml = false
         var keepAlive = false
         while (true) {
             val h = serverIn.readLineAscii()
             if (h.isEmpty()) break
             val l = h.lowercase()
             when {
-                l.startsWith("transfer-encoding:") && l.contains("chunked") -> { isChunked = true; continue }
-                l.startsWith("content-encoding:")   && l.contains("gzip")   -> { isGzip    = true; continue }
-                l.startsWith("content-type:")       && l.contains("text/html") -> isHtml = true
-                l.startsWith("connection:")         && l.contains("keep-alive") -> keepAlive = true
+                l.startsWith("transfer-encoding:") && l.contains("chunked") -> {
+                    isChunked = true; continue
+                }
+
+                l.startsWith("content-encoding:") && l.contains("gzip") -> {
+                    isGzip = true; continue
+                }
+
+                l.startsWith("content-type:") && l.contains("text/html") -> isHtml = true
+                l.startsWith("connection:") && l.contains("keep-alive") -> keepAlive = true
             }
             if (!l.startsWith("content-length:")) respHdrs += h
         }
 
         /* ----- read resp body ----- */
-        val rawBody  = if (!isChunked) serverIn.readBytes() else serverIn.readChunked()
+        val rawBody = if (!isChunked) serverIn.readBytes() else serverIn.readChunked()
         val bodyForClient = when {
             !isHtml -> rawBody              // pass-through (keep gzip? yes)
-            else -> htmlProcessor.process(String(rawBody.maybeGunzip(), Charsets.UTF_8), host)
+            else -> htmlProcessor.process(
+                String(rawBody.maybeGunzip(), Charsets.UTF_8),
+                protocol,
+                host,
+                reqLine
+            )
                 .toByteArray(Charsets.UTF_8)
         }
 

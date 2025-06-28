@@ -42,7 +42,7 @@ class ClientWorker(
                 buf, browser.getOutputStream(),
                 BufferedInputStream(origin.getInputStream()), origin.getOutputStream(),
                 html
-            ).relayOnce(req.host)
+            ).relayOnce(Protocol.HTTP, req.host)
         }
     }
 
@@ -58,7 +58,7 @@ class ClientWorker(
                 BufferedInputStream(cli.getInputStream()), cli.getOutputStream(),
                 BufferedInputStream(tls.serverSock.getInputStream()), tls.serverSock.getOutputStream(),
                 html
-            ).relayOnce(host)                // single request, close afterward
+            ).relayOnce(Protocol.HTTPS, host)                // single request, close afterward
         }
     }
 }

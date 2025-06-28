@@ -53,7 +53,8 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.bcprov.jdk15on)
     implementation(libs.bcpkix.jdk15on)
-
+    implementation(libs.jsoup)            // DOM parsing / sanitising
+    implementation(libs.readability)  // Readability4J
 
     testImplementation(libs.junit)
 
