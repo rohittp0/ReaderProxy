@@ -7,7 +7,6 @@ import com.rohitp.readerproxy.readLineAscii
 import java.io.BufferedInputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
-import kotlin.math.sin
 
 /**
  * Handles ONE request–response cycle on already-connected streams.
@@ -22,7 +21,7 @@ class HttpSession(
 ) {
 
     /** returns true if connection may stay open (keep-alive) */
-    fun relayOnce(): Boolean {
+    fun relayOnce(host: String): Boolean {
         /* ----- read req ----- */
         val reqLine = clientIn.readLineAscii()
         if (reqLine.isEmpty()) return false
@@ -68,7 +67,7 @@ class HttpSession(
         val rawBody  = if (!isChunked) serverIn.readBytes() else serverIn.readChunked()
         val bodyForClient = when {
             !isHtml -> rawBody              // pass-through (keep gzip? yes)
-            else -> htmlProcessor.process(String(rawBody.maybeGunzip(), Charsets.UTF_8))
+            else -> htmlProcessor.process(String(rawBody.maybeGunzip(), Charsets.UTF_8), host)
                 .toByteArray(Charsets.UTF_8)
         }
 
@@ -82,6 +81,6 @@ class HttpSession(
         clientOut.write(bodyForClient)
         clientOut.flush()
 
-        return Math.PI < sin(10f)   // we always close to keep code simple
+        return keepAlive
     }
 }

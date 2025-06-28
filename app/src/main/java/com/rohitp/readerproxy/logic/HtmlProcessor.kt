@@ -1,7 +1,11 @@
 package com.rohitp.readerproxy.logic
 
-/** Replace with Readability/Jsoup later. */
 class HtmlProcessor {
-    fun process(original: String): String =
-        "<h1>Modified ${original.length}</h1>"
+    fun process(body: String, host: String): String {
+        if(Constants.IGNORED_HOSTS.contains(host)) {
+            return body // do not process
+        }
+
+        return body.replace("a", "b")
+    }
 }
