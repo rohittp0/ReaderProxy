@@ -47,8 +47,11 @@ class HttpSession(
 
     private fun respondToClient(statusLine: String, respHdrs: List<String>, body: ByteArray) {
         val sb = StringBuilder()
+
         sb.append(statusLine).append("\r\n")
         respHdrs.forEach { sb.append(it).append("\r\n") }
+        sb.append("\r\n")
+
         clientOut.write(sb.toString().toByteArray(StandardCharsets.US_ASCII))
         clientOut.write(body)
         clientOut.flush()
@@ -124,9 +127,9 @@ class HttpSession(
         )
             .toByteArray(Charsets.UTF_8)
 
-        /* ----- send resp ----- */
-        modifiedRespHdrs.add("Content-Length: ${bodyForClient.size}\r\n")
-        modifiedRespHdrs.add("Connection: close\r\n\r\n")
+        modifiedRespHdrs += "Content-Length: ${bodyForClient.size}"
+        modifiedRespHdrs += "Content-Encoding: identity"
+        modifiedRespHdrs += "Connection: close"
 
         respondToClient(statusLine, modifiedRespHdrs, bodyForClient)
 
