@@ -1,6 +1,6 @@
 # ReaderProxy 📖
 
-<img src="docs/screen-recording.gif" height="500">
+<img src="docs/screen-recording.gif" height="500" alt="screen recording">
 
 A VPN-backed local proxy for Android that intercepts HTTP(S) traffic and injects **reader mode** into web pages — on demand.
 
