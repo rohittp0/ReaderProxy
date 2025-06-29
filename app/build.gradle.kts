@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.rohitp.readerproxy"
-        minSdk = 35
+        minSdk = 30
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -50,9 +50,13 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.accompanist.pager)
+
     implementation(libs.timber)
+
     implementation(libs.bcprov.jdk15on)
     implementation(libs.bcpkix.jdk15on)
+
     implementation(libs.jsoup)            // DOM parsing / sanitising
     implementation(libs.readability)  // Readability4J
 
