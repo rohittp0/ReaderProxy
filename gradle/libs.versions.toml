@@ -2,6 +2,7 @@
 accompanistPager = "0.35.0-alpha"
 agp = "8.10.1"
 bcprovJdk15on = "1.70"
+datastorePreferences = "1.1.7"
 jsoup = "1.17.2"
 kotlin = "2.1.0"
 coreKtx = "1.16.0"
@@ -17,6 +18,7 @@ timber = "5.0.1"
 [libraries]
 accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanistPager" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 bcpkix-jdk15on = { module = "org.bouncycastle:bcpkix-jdk15on", version.ref = "bcprovJdk15on" }
 bcprov-jdk15on = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bcprovJdk15on" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }

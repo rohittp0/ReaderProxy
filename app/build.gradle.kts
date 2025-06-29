@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.accompanist.pager)
 
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.timber)
 
     implementation(libs.bcprov.jdk15on)
