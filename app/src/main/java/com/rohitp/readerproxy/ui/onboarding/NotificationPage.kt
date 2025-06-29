@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import com.rohitp.readerproxy.R
 import com.rohitp.readerproxy.ui.PageScaffold
 
 @Composable
@@ -36,10 +37,9 @@ internal fun NotificationPage(
     }
 
     PageScaffold(
-        title = "Allow notifications",
-        body = "We show a persistent notification while the VPN is active. " +
-                "Android 13+ requires explicit permission.",
-        buttonText = if (hasPermission) "Next" else "Grant Permission",
+        title = R.string.onboarding_notification_title,
+        body = R.string.onboarding_notification_body,
+        buttonText = if (hasPermission) R.string.next_button_text else R.string.grant_permission_button_text,
         buttonEnabled = true,
         onClick = if (hasPermission) onNext else askNotificationPermission
     )

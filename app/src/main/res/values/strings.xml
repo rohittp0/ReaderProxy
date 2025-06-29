@@ -3,4 +3,21 @@
     <string name="vpn_started">VPN Running</string>
     <string name="vpn_failed">VPN failed to start</string>
     <string name="stop_vpn">Stop VPN</string>
+    <string name="stop_button_text">Stop Reader Mode</string>
+    <string name="start_button_text">Start Reader Mode</string>
+    <string name="install_certificate_menu_item">Install certificate</string>
+    <string name="vpn_permission_denied">VPN permission denied. Please enable it in settings.</string>
+    <string name="welcome_text">Welcome to Reader Proxy!</string>
+    <string name="onboarding_intro_text">"This app turns every web page into a clutter-free reader view. It runs a local VPN &amp; proxy to rewrite HTML on the fly."</string>
+    <string name="next_button_text">Next</string>
+    <string name="onboarding_notification_title">Allow notifications</string>
+    <string name="onboarding_notification_body">"We show a persistent notification while the VPN is active. Android 13+ requires explicit permission."</string>
+    <string name="grant_permission_button_text">Grant Permission</string>
+    <string name="onboarding_certificate_title">Install local CA</string>
+    <string name="onboarding_certificate_body">To decrypt HTTPS pages Reader Proxy installs its own CA certificate, if skipped only pages that use HTTP will work.</string>
+    <string name="onboarding_certificate_failed">Failed to install CA. Please try to install manually from Downloads. The CA file is named %s.</string>
+    <string name="skip_button_text">Skip</string>
+    <string name="install_button_text">Install</string>
+    <string name="open_settings_button_text">Open Settings</string>
+    <string name="done_button_text">Done</string>
 </resources>

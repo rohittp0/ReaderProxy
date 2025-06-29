@@ -25,8 +25,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.rohitp.readerproxy.R
 import java.io.File
 import java.io.FileOutputStream
 
@@ -89,11 +91,13 @@ internal fun CertificatePage(onDone: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Install local CA", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            stringResource(R.string.onboarding_certificate_title),
+            style = MaterialTheme.typography.headlineMedium
+        )
         Spacer(Modifier.height(12.dp))
         Text(
-            "To decrypt HTTPS pages Reader Proxy installs its own CA certificate, " +
-                    "if skipped only pages that use HTTP will work.",
+            stringResource(R.string.onboarding_certificate_body),
             style = MaterialTheme.typography.bodyLarge
         )
 
@@ -101,22 +105,41 @@ internal fun CertificatePage(onDone: () -> Unit) {
             Spacer(Modifier.height(24.dp))
 
             Text(
-                "Failed to install CA. Please try to install manually from Downloads." +
-                        "The CA file is named $fileName.",
+                stringResource(R.string.onboarding_certificate_failed, fileName),
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
 
         Spacer(Modifier.height(32.dp))
         Row {
-            OutlinedButton(onClick = onDone) { Text("Skip") }
+            OutlinedButton(onClick = onDone) { Text(stringResource(R.string.skip_button_text)) }
             Spacer(Modifier.width(16.dp))
-            when (true) {
-                (!requested && !failed) -> Button(onClick = ::launchInstallIntent) { Text("Install") }
-                (requested && failed) -> Button(onClick = ::openSettings) { Text("Open Settings") }
-                else -> Button(onClick = onDone) { Text("Done") }
-            }
+            Action(
+                requested = requested,
+                failed = failed,
+                onDone = onDone,
+                onInstall = ::launchInstallIntent,
+                openSettings = ::openSettings
+            )
         }
+    }
+}
+
+@Composable
+private fun Action(
+    requested: Boolean, failed: Boolean, onDone: () -> Unit, onInstall: () -> Unit,
+    openSettings: () -> Unit
+) {
+    when (true) {
+        (!requested && !failed) -> Button(onClick = onInstall) {
+            Text(stringResource(R.string.install_button_text))
+        }
+
+        (requested && failed) -> Button(onClick = openSettings) {
+            Text(stringResource(R.string.open_settings_button_text))
+        }
+
+        else -> Button(onClick = onDone) { Text(stringResource(R.string.done_button_text)) }
     }
 }
 

@@ -31,10 +31,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.rohitp.readerproxy.MyVpnService
+import com.rohitp.readerproxy.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,14 +62,14 @@ fun HomeScreen(nav: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Reader Proxy") },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     IconButton(onClick = { showMenu = !showMenu }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "menu")
                     }
                     DropdownMenu(showMenu, { showMenu = false }) {
                         DropdownMenuItem(
-                            text = { Text("Install certificate") },
+                            text = { Text(stringResource(R.string.install_certificate_menu_item)) },
                             onClick = {
                                 showMenu = false
                                 nav.navigate(Screens.Certificate.route)
@@ -83,13 +85,13 @@ fun HomeScreen(nav: NavController) {
         ) {
             Text(
                 if (permissionDenied)
-                    "VPN permission denied. Please enable it in settings."
+                    stringResource(R.string.vpn_permission_denied)
                 else
-                    "Welcome to Reader Proxy!"
+                    stringResource(R.string.welcome_text),
             )
 
             /* button appearance depends on running state */
-            val btnText = if (isRunning) "Stop Reader Mode" else "Start Reader Mode"
+            val btnText = if (isRunning) R.string.stop_button_text else R.string.start_button_text
             val btnColors = ButtonDefaults.buttonColors(
                 containerColor = if (isRunning)
                     MaterialTheme.colorScheme.error
@@ -112,7 +114,7 @@ fun HomeScreen(nav: NavController) {
                     }
                 },
                 colors = btnColors
-            ) { Text(btnText) }
+            ) { Text(stringResource(btnText)) }
         }
     }
 }

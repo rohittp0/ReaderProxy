@@ -1,15 +1,15 @@
 package com.rohitp.readerproxy.ui.onboarding
 
 import androidx.compose.runtime.Composable
+import com.rohitp.readerproxy.R
 import com.rohitp.readerproxy.ui.PageScaffold
 
 @Composable
 internal fun IntroPage(onNext: () -> Unit) {
     PageScaffold(
-        title = "Welcome to Reader Proxy",
-        body = "This app turns every web page into a clutter-free reader view. " +
-                "It runs a local VPN & proxy to rewrite HTML on the fly.",
-        buttonText = "Next",
+        title = R.string.welcome_text,
+        body = R.string.onboarding_intro_text,
+        buttonText = R.string.next_button_text,
         buttonEnabled = true,
         onClick = onNext
     )
