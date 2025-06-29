@@ -10,6 +10,7 @@ import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import com.rohitp.readerproxy.proxy.ProxyServer
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.concurrent.thread
 
 
@@ -21,26 +22,28 @@ class MyVpnService : VpnService() {
         private const val PROXY_PORT = 8888
         private const val NOTIFICATION_CHANNEL_ID = "reader_mode_vpn_channel"
         private const val NOTIFICATION_CHANNEL_NAME = "Reader Mode VPN"
+        internal const val ACTION_STOP = "STOP_VPN"
+
+        val isRunning = MutableStateFlow(false)
     }
 
     private var vpnInterface: ParcelFileDescriptor? = null
+    private var proxyServer: ProxyServer? = null
     private var proxyThread: Thread? = null
 
     override fun onCreate() {
         super.onCreate()
-        // Start the local proxy inside a background thread
+        isRunning.value = true
+
+        proxyServer = ProxyServer(this, PROXY_PORT)
         proxyThread = thread(name = "local-http-proxy") {
-            ProxyServer(this@MyVpnService, PROXY_PORT).startBlocking()
+            proxyServer?.startBlocking()
         }
     }
 
-    override fun onStartCommand(i: Intent?, f: Int, s: Int): Int {
-        if(i?.action == "STOP_VPN") {
-            // Stop the VPN service if requested
-            vpnInterface?.close()
-            vpnInterface = null
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+    override fun onStartCommand(intent: Intent?, f: Int, s: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            tearDown()
             return START_NOT_STICKY
         }
 
@@ -104,9 +107,17 @@ class MyVpnService : VpnService() {
         return notification
     }
 
-    override fun onDestroy() {
+    private fun tearDown() {
+        proxyServer?.stop()                       // ① close ServerSocket cleanly
         proxyThread?.interrupt()
         vpnInterface?.close()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+        isRunning.value = false
+    }
+
+    override fun onDestroy() {
+        tearDown()
         super.onDestroy()
     }
 }

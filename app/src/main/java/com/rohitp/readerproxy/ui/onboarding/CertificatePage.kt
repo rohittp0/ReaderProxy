@@ -1,7 +1,7 @@
 package com.rohitp.readerproxy.ui.onboarding
 
 import android.app.Activity
-import android.net.Uri
+import android.content.Intent
 import android.os.Environment
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
@@ -76,11 +76,9 @@ internal fun CertificatePage(onDone: () -> Unit) {
         requested = false
         failed = true
 
-        val intent = android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-            .let {
-                android.content.Intent(it)
-                    .apply { data = Uri.fromParts("package", context.packageName, null) }
-            }
+        val intent = Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
         context.startActivity(intent)
     }
 
