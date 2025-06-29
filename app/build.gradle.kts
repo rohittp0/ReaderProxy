@@ -80,6 +80,7 @@ dependencies {
 
     implementation(libs.jsoup)            // DOM parsing / sanitising
     implementation(libs.readability)  // Readability4J
+    implementation(libs.slf4j.nop)
 
     testImplementation(libs.junit)
 
