@@ -9,11 +9,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,15 +33,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavController
 import com.rohitp.readerproxy.MyVpnService
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(nav: NavController) {
     val ctx = LocalContext.current
 
     /* observe running state from the service */
     val isRunning by MyVpnService.isRunning.collectAsState(initial = false)
     var permissionDenied by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
     val serviceIntent = remember { Intent(ctx, MyVpnService::class.java) }
 
@@ -46,9 +57,29 @@ fun HomeScreen() {
         }
     }
 
-    Scaffold { padd ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Reader Proxy") },
+                actions = {
+                    IconButton(onClick = { showMenu = !showMenu }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "menu")
+                    }
+                    DropdownMenu(showMenu, { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Install certificate") },
+                            onClick = {
+                                showMenu = false
+                                nav.navigate(Screens.Certificate.route)
+                            }
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padd).wrapContentSize(Alignment.Center)
+            modifier = Modifier.fillMaxSize().padding(padding).wrapContentSize(Alignment.Center)
         ) {
             Text(
                 if (permissionDenied)
