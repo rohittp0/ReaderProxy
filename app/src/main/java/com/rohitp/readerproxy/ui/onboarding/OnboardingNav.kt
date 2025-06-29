@@ -22,16 +22,9 @@ fun OnboardingNav(
         modifier = Modifier.fillMaxSize()
     ) { page ->
         when (page) {
-
-            0 -> IntroPage(onNext = { next() })
-
-            1 -> NotificationPage(
-                onNext = next,
-            )
-
-            2 -> CertificatePage(
-                onDone = onFinished
-            )
+            0 -> IntroPage(onNext = ::next)
+            1 -> NotificationPage(onNext = ::next)
+            2 -> CertificatePage(onDone = onFinished)
         }
     }
 }
