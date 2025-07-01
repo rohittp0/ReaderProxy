@@ -10,3 +10,5 @@
 local.properties
 **/*.pem
 **/release/
+**/*.jks
+**/*.salive

@@ -12,6 +12,10 @@ android {
         load(rootProject.file("local.properties").inputStream())
     }
 
+    val gradleProperties = Properties().apply {
+        load(rootProject.file("gradle.properties").inputStream())
+    }
+
     namespace = "com.rohitp.readerproxy"
     compileSdk = 35
 
@@ -19,18 +23,29 @@ android {
         applicationId = "com.rohitp.readerproxy"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+
+        versionCode = Integer.parseInt(gradleProperties.getProperty("VERSION_CODE"))
+        versionName = gradleProperties.getProperty("VERSION")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
+        fun getFromEnvOrProperties(key: String): String {
+            return System.getenv(key) ?: properties.getOrDefault(key, "") as String
+        }
+
         create("release") {
-            storeFile = file(properties.getProperty("storeFile"))
-            storePassword = properties.getProperty("storePassword")
-            keyAlias = properties.getProperty("keyAlias")
-            keyPassword = properties.getProperty("keyPassword")
+            storeFile = file("$projectDir/keystore.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
+        getByName("debug") {
+            storeFile = file("$projectDir/keystore-debug.jks")
+            storePassword = getFromEnvOrProperties("KEYSTORE_PASSWORD_DEBUG")
+            keyAlias = getFromEnvOrProperties("KEY_ALIAS_DEBUG")
+            keyPassword = getFromEnvOrProperties("KEY_PASSWORD_DEBUG")
         }
     }
 
@@ -44,6 +59,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+
+        getByName("debug") {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {

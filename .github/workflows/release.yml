@@ -1,0 +1,78 @@
+name: Build and Release Android App
+
+concurrency:
+  group: build-and-release-android-app
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+      - release/*
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Create local.properties with the proper sdk.dir (update the path if needed)
+      - name: Create local.properties file
+        run: echo "${{ secrets.LOCAL_PROPERTIES }}" > local.properties
+
+      # 3. Set up JDK 21
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      # 4. Setup Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 5. Decode the Base64‑encoded JKS keystore and save it as app/keystore.jks
+      - name: Decode JKS keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/keystore.jks
+
+      # 6. Make the Gradle wrapper executable
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # 7. Increment version numbers by calling the shell script
+      - name: Increment Version Numbers
+        id: increment_version
+        run: bash increment_version.sh
+
+      - name: Commit Version Number Increment and Push
+        run: |
+          git config --local user.email "github-actions"
+          git config --local user.name "github-actions@github.com"
+          git add gradle.properties
+          git commit -m "[skip ci] Increment version number"
+          git push
+
+      # 8. Build the release App Bundle using configuration caching
+      - name: Build Android App
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew --configuration-cache bundleRelease uploadCrashlyticsSymbolFileRelease
+
+      # 9. Create a GitHub Release and upload the bundle using the new version as the tag name
+      - name: Create GitHub Release and upload the bundle
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.increment_version.outputs.new_version }}
+          files: app/build/outputs/bundle/release/app-release.aab
