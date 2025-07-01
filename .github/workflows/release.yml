@@ -46,14 +46,16 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: changelog-ci
-        uses: saadmk11/changelog-ci@v1.1.2
-        id: changelog-ci
-
       # 7. Increment version numbers by calling the shell script
       - name: Increment Version Numbers
         id: increment_version
         run: bash increment_version.sh
+
+      - name: changelog-ci
+        uses: saadmk11/changelog-ci@v1.1.2
+        id: changelog-ci
+        with:
+          release_version: ${{ steps.increment_version.outputs.new_version }}
 
       # 8. Build the release App Bundle using configuration caching
       - name: Build Android App
