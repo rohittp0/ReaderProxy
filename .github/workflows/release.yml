@@ -51,14 +51,6 @@ jobs:
         id: increment_version
         run: bash increment_version.sh
 
-      - name: Commit Version Number Increment and Push
-        run: |
-          git config --local user.email "github-actions"
-          git config --local user.name "github-actions@github.com"
-          git add gradle.properties
-          git commit -m "[skip ci] Increment version number"
-          git push
-
       # 8. Build the release App Bundle using configuration caching
       - name: Build Android App
         env:
@@ -75,4 +67,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.increment_version.outputs.new_version }}
-          files: app/build/outputs/bundle/release/app-release.aab
+          files: |
+            app/build/outputs/bundle/release/app-release.aab
+            app/build/outputs/bundle/release/native-debug-symbols.zip
+
+      - name: Commit Version Number Increment and Push
+        run: |
+          git config --local user.email "github-actions"
+          git config --local user.name "github-actions@github.com"
+          git add gradle.properties
+          git commit -m "[skip ci] Increment version number"
+          git push

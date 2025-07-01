@@ -51,7 +51,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
 
@@ -77,6 +77,20 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+tasks.register<Zip>("zipNativeDebugSymbols") {
+    from("build/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib")
+    exclude("armeabi*")
+    exclude("mips")
+    archiveFileName.set("native-debug-symbols.zip")
+    destinationDirectory.set(file("release"))
+}
+
+afterEvaluate {
+    tasks.named("bundleRelease") {
+        finalizedBy("zipNativeDebugSymbols")
     }
 }
 
