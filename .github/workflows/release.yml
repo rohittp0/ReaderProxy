@@ -59,6 +59,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew --configuration-cache bundleRelease
 
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       # 9. Create a GitHub Release and upload the bundle using the new version as the tag name
       - name: Create GitHub Release and upload the bundle
         id: create_release
@@ -67,9 +73,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.increment_version.outputs.new_version }}
+          body: ${{steps.github_release.outputs.changelog}}
           files: |
-            app/build/outputs/bundle/release/app-release.aab
-            app/build/outputs/bundle/release/native-debug-symbols.zip
+            app/release/app-release.aab
+            app/release/native-debug-symbols.zip
 
       - name: Commit Version Number Increment and Push
         run: |
