@@ -51,13 +51,6 @@ jobs:
         id: increment_version
         run: bash increment_version.sh
 
-      - name: changelog-ci
-        uses: saadmk11/changelog-ci@v1.1.2
-        id: changelog-ci
-        with:
-          release_version: ${{ steps.increment_version.outputs.new_version }}
-          config_file: changelog-ci-config.json
-
       # 8. Build the release App Bundle using configuration caching
       - name: Build Android App
         env:
@@ -74,7 +67,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.increment_version.outputs.new_version }}
-          body: "${{ steps.changelog-ci.outputs.changelog }}"
           files: |
             app/release/app-release.aab
             app/release/native-debug-symbols.zip
