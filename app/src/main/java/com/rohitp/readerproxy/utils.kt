@@ -1,5 +1,6 @@
 package com.rohitp.readerproxy
 
+import android.os.Build
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -20,7 +21,17 @@ fun InputStream.readChunked(): ByteArray {
         val chunkSize = sizeLine.trim().toInt(16)
         if (chunkSize == 0) break
         val buf = ByteArray(chunkSize)
-        readNBytes(buf, 0, chunkSize)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            readNBytes(buf, 0, chunkSize)
+        }
+        else {
+            var bytesRead = 0
+            while (bytesRead < chunkSize) {
+                val readCount = read(buf, bytesRead, chunkSize - bytesRead)
+                if (readCount == -1) throw IllegalStateException("Unexpected end of stream")
+                bytesRead += readCount
+            }
+        }
         out.write(buf)
         read(); read()              // skip CR LF after the chunk
     }
