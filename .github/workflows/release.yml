@@ -46,6 +46,14 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          mode: "HYBRID"
+          exportCache: true
+
       # 7. Increment version numbers by calling the shell script
       - name: Increment Version Numbers
         id: increment_version
@@ -58,12 +66,6 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew --configuration-cache bundleRelease
-
-      - name: Build Changelog
-        id: github_release
-        uses: mikepenz/release-changelog-builder-action@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       # 9. Create a GitHub Release and upload the bundle using the new version as the tag name
       - name: Create GitHub Release and upload the bundle
