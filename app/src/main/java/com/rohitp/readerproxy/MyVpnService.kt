@@ -20,6 +20,7 @@ class MyVpnService : VpnService() {
         private const val VPN_ADDRESS = "10.10.0.2"
         private const val VPN_PREFIX = 32           // /32 single host
         private const val PROXY_PORT = 8888
+        private const val NOTIFICATION_ID = 1
         private const val NOTIFICATION_CHANNEL_ID = "reader_mode_vpn_channel"
         private const val NOTIFICATION_CHANNEL_NAME = "Reader Mode VPN"
         internal const val ACTION_STOP = "STOP_VPN"
@@ -49,8 +50,9 @@ class MyVpnService : VpnService() {
 
         if (vpnInterface != null) return START_STICKY
 
+        createNotificationChannel()
+        startForeground(1, createNotification(R.string.vpn_starting))
         establishVpn()
-        startForeground(1, updateNotification(R.string.vpn_started))
 
         return START_STICKY
     }
@@ -75,16 +77,17 @@ class MyVpnService : VpnService() {
         }
     }
 
-    private fun updateNotification(message: Int): Notification {
+    private fun createNotificationChannel() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(
-            NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                NOTIFICATION_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
+        val channel = NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_DEFAULT
         )
+        notificationManager.createNotificationChannel(channel)
+    }
 
+    private fun createStopIntent(): Notification.Action {
         val stopIcon = Icon.createWithResource(this, R.drawable.ic_launcher_foreground)
 
         val stopIntentAction = Notification.Action.Builder(
@@ -92,19 +95,29 @@ class MyVpnService : VpnService() {
             getString(R.string.stop_vpn),
             PendingIntent.getService(
                 this, 0, Intent(this, MyVpnService::class.java).apply {
-                    action = "STOP_VPN"
+                    action = ACTION_STOP
                 }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         )
 
+        return stopIntentAction.build()
+    }
+
+    private fun createNotification(message: Int): Notification {
         val notification = Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle(getString(message))
             .setSmallIcon(R.drawable.ic_launcher_foreground) // Use a suitable icon
             .setOngoing(true)
-            .setActions(stopIntentAction.build())
+            .setActions(createStopIntent())
             .build()
 
         return notification
+    }
+
+    private fun updateNotification(message: Int) {
+        val notification = createNotification(message)
+        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
+            .notify(NOTIFICATION_ID, notification)
     }
 
     private fun tearDown() {

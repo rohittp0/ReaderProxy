@@ -20,4 +20,5 @@
     <string name="install_button_text">Install</string>
     <string name="open_settings_button_text">Open Settings</string>
     <string name="done_button_text">Done</string>
+    <string name="vpn_starting">VPN Starting...</string>
 </resources>

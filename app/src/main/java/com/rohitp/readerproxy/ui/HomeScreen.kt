@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.rohitp.readerproxy.MyVpnService
+import com.rohitp.readerproxy.MyVpnService.Companion.ACTION_STOP
 import com.rohitp.readerproxy.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,9 +105,10 @@ fun HomeScreen(nav: NavController) {
                 modifier = Modifier.padding(16.dp),
                 onClick = {
                     if (isRunning) {
-                        ctx.startService(serviceIntent.apply {
-                            action = MyVpnService.ACTION_STOP
-                        })
+                        val intent = Intent(ctx, MyVpnService::class.java).apply {
+                            action = ACTION_STOP
+                        }
+                        ContextCompat.startForegroundService(ctx, intent)
                     } else {
                         val prep = VpnService.prepare(ctx)          // maybe ask
                         if (prep != null) vpnPermLauncher.launch(prep)
