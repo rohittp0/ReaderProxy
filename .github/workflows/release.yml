@@ -57,7 +57,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew --configuration-cache bundleRelease uploadCrashlyticsSymbolFileRelease
+        run: ./gradlew --configuration-cache bundleRelease
 
       # 9. Create a GitHub Release and upload the bundle using the new version as the tag name
       - name: Create GitHub Release and upload the bundle
