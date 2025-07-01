@@ -46,13 +46,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build Changelog
-        id: github_release
-        uses: mikepenz/release-changelog-builder-action@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          mode: "HYBRID"
-          exportCache: true
+      - name: changelog-ci
+        uses: saadmk11/changelog-ci@v1.1.2
+        id: changelog-ci
 
       # 7. Increment version numbers by calling the shell script
       - name: Increment Version Numbers
@@ -75,7 +71,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.increment_version.outputs.new_version }}
-          body: ${{steps.github_release.outputs.changelog}}
+          body: "${{ steps.changelog-ci.outputs.changelog }}"
           files: |
             app/release/app-release.aab
             app/release/native-debug-symbols.zip
