@@ -56,6 +56,7 @@ jobs:
         id: changelog-ci
         with:
           release_version: ${{ steps.increment_version.outputs.new_version }}
+          config_file: changelog-ci-config.json
 
       # 8. Build the release App Bundle using configuration caching
       - name: Build Android App
