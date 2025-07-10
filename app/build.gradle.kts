@@ -28,6 +28,7 @@ android {
         versionName = gradleProperties.getProperty("VERSION")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
     }
 
     signingConfigs {
@@ -69,6 +70,8 @@ android {
     }
 
     testOptions {
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
+
         managedDevices {
             /* ---------- define virtual devices ---------- */
             allDevices {
@@ -153,6 +156,7 @@ dependencies {
 
 // Robolectric for local unit tests across multiple API levels
     testImplementation(libs.robolectric) // supports API 30-35
+    androidTestUtil(libs.androidx.orchestrator)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
