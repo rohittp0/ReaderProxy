@@ -1,10 +1,10 @@
 [versions]
-accompanistPager = "0.35.0-alpha"
-agp = "8.10.1"
+accompanistPager = "0.36.0"
+agp = "8.11.0"
 bcprovJdk15on = "1.70"
 datastorePreferences = "1.1.7"
-jsoup = "1.17.2"
-kotlin = "2.1.0"
+jsoup = "1.21.1"
+kotlin = "2.2.0"
 coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -12,16 +12,22 @@ espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.9.1"
 activityCompose = "1.10.1"
 composeBom = "2025.06.01"
-navigationCompose = "2.9.0"
+navigationCompose = "2.9.1"
 readability = "1.0.8"
-slf4jNop = "2.0.13"
+robolectric = "4.15.1"
+rules = "1.6.1"
+slf4jNop = "2.0.17"
 timber = "5.0.1"
+uiautomator = "2.3.0"
+uiTestJunit4 = "1.8.3"
 
 [libraries]
 accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanistPager" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-rules = { module = "androidx.test:rules", version.ref = "rules" }
+androidx-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 bcpkix-jdk15on = { module = "org.bouncycastle:bcpkix-jdk15on", version.ref = "bcprovJdk15on" }
 bcprov-jdk15on = { module = "org.bouncycastle:bcprov-jdk15on", version.ref = "bcprovJdk15on" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
@@ -36,11 +42,12 @@ androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 readability = { module = "net.dankito.readability4j:readability4j", version.ref = "readability" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4jNop" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
+ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "uiTestJunit4" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

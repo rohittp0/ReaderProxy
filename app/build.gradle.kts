@@ -1,5 +1,5 @@
+import com.android.build.api.dsl.ManagedVirtualDevice
 import java.util.Properties
-import kotlin.apply
 
 plugins {
     alias(libs.plugins.android.application)
@@ -17,7 +17,7 @@ android {
     }
 
     namespace = "com.rohitp.readerproxy"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.rohitp.readerproxy"
@@ -67,9 +67,35 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    testOptions {
+        managedDevices {
+            /* ---------- define virtual devices ---------- */
+            allDevices {
+                for (level in 30..35) {
+                    create<ManagedVirtualDevice>("pixel6Api$level") {
+                        device = "Pixel 6"
+                        apiLevel = level
+                        systemImageSource = "aosp-atd"
+                    }
+                }
+            }
+
+            /* ---------- group that runs every test on every API ---------- */
+            groups {
+                create("allDevices") {
+                    for (level in 30..35) {
+                        targetDevices.add(allDevices["pixel6Api$level"])
+                    }
+                }
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -120,9 +146,13 @@ dependencies {
     testImplementation(libs.junit)
 
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.rules)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.ui.test.junit4)
+    androidTestImplementation(libs.androidx.uiautomator)
+
+// Robolectric for local unit tests across multiple API levels
+    testImplementation(libs.robolectric) // supports API 30-35
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
